@@ -8,6 +8,7 @@ repositories {
 		url = "https://maven.fabricmc.net"
 	}
 	maven { url 'https://jitpack.io' }
+	maven { url "https://maven.parchmentmc.org" }
 }
 
 sourceCompatibility = targetCompatibility = JavaVersion.VERSION_17
@@ -21,7 +22,7 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings loom.layered() {
 		officialMojangMappings()
-		parchment("org.parchmentmc.data:parchment-1.16.5:2022.03.06@zip")
+		parchment("org.parchmentmc.data:${project.parchment_version}@zip")
 	}
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
