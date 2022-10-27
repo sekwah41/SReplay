@@ -10,9 +10,9 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(ChunkMap.class)
 public interface ThreadedAnvilChunkStorageAccessor {
-    @Accessor("watchDistance")
-    int getWatchDistance();
+    @Accessor("viewDistance")
+    int getViewDistance();
 
-    @Invoker("sendWatchPackets")
+    @Invoker("updateChunkTracking")
     void sendWatchPackets2(ServerPlayer player, ChunkPos pos, Packet<?>[] packets, boolean withinMaxWatchDistance, boolean withinViewDistance);
 }

@@ -7,6 +7,6 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(ClientboundAddPlayerPacket.class)
 public interface PlayerSpawnS2CPacketAccessor {
-    @Accessor("uuid")
-    UUID getUUID();
+    @Accessor("playerId")
+    UUID getPlayerId();
 }

@@ -35,12 +35,12 @@ public abstract class MixinIntegratedServer extends MinecraftServer {
                 minecraftSessionService, gameProfileRepository, userCache, worldGenerationProgressListenerFactory);
     }
 
-    @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/profiler/Profiler;pop()V"))
+    @Inject(method = "tickServer", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/profiling/ProfilerFiller;pop()V"))
     public void onPause(CallbackInfo ci) {
         Photographer.listFakes(this).forEach(Photographer::onSoftPause);
     }
 
-    @Inject(method = "stop", at = @At("HEAD"))
+    @Inject(method = "halt", at = @At("HEAD"))
     public void onStop(boolean b, CallbackInfo ci){
         Photographer.killAllFakes(this, false);
     }

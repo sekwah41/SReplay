@@ -12,7 +12,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import com.hadroncfy.sreplay.SReplayMod;
-import com.hadroncfy.sreplay.command.SReplayCommand;
 import com.hadroncfy.sreplay.config.TextRenderer;
 import com.hadroncfy.sreplay.mixin.GameStateChangeS2CPacketAccessor;
 import com.hadroncfy.sreplay.mixin.PlayerSpawnS2CPacketAccessor;
@@ -324,7 +323,7 @@ public class Recorder implements IPacketListener {
     public void onPacket(Packet<?> p) {
         if (!stopped){
             if (p instanceof ClientboundAddPlayerPacket){
-                metaData.players.add(((PlayerSpawnS2CPacketAccessor) p).getUUID());
+                metaData.players.add(((PlayerSpawnS2CPacketAccessor) p).getPlayerId());
                 saveMetadata();
             }
             if (p instanceof ClientboundDisconnectPacket){
@@ -332,10 +331,10 @@ public class Recorder implements IPacketListener {
             }
             if (param.dayTime != -1 && p instanceof ClientboundSetTimePacket){
                 final WorldTimeUpdateS2CPacketAccessor p2 = (WorldTimeUpdateS2CPacketAccessor)p;
-                p = new ClientboundSetTimePacket(p2.getTime(), param.dayTime, false);
+                p = new ClientboundSetTimePacket(p2.getGameTime(), param.dayTime, false);
             }
             if (param.forcedWeather != ForcedWeather.NONE && p instanceof ClientboundGameEventPacket){
-                ClientboundGameEventPacket.Type r = ((GameStateChangeS2CPacketAccessor)p).getReason();
+                ClientboundGameEventPacket.Type r = ((GameStateChangeS2CPacketAccessor)p).getEvent();
                 if (
                     r == ClientboundGameEventPacket.START_RAINING
                     || r == ClientboundGameEventPacket.STOP_RAINING

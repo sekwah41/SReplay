@@ -15,20 +15,20 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import com.hadroncfy.sreplay.recording.Photographer;
 
-@Mixin(targets = "net.minecraft.server.world.ThreadedAnvilChunkStorage$EntityTracker")
+@Mixin(targets = "net.minecraft.server.level.ChunkMap$TrackedEntity")
 public class MixinEntityTracker {
     @Shadow @Final
     private Entity entity;
 
-    @Redirect(method = "updateCameraPosition(Lnet/minecraft/server/network/ServerPlayerEntity;)V", at = @At(
+    @Redirect(method = "updatePlayer", at = @At(
         value = "INVOKE",
-        target = "Lnet/minecraft/server/world/ThreadedAnvilChunkStorage;method_18725(Lnet/minecraft/server/world/ThreadedAnvilChunkStorage;)I"
+        target = "Lnet/minecraft/server/level/ChunkMap;method_18725(Lnet/minecraft/server/level/ChunkMap;)I"
     ))
     private int getViewDistance(ChunkMap cela, ServerPlayer player){
-        return getRealViewDistance(player, ((ThreadedAnvilChunkStorageAccessor)cela).getWatchDistance());
+        return getRealViewDistance(player, ((ThreadedAnvilChunkStorageAccessor)cela).getViewDistance());
     }
 
-    @Redirect(method = "updateCameraPosition(Lnet/minecraft/server/network/ServerPlayerEntity;)V", at = @At(
+    @Redirect(method = "updatePlayer", at = @At(
         value = "INVOKE",
         target = "Ljava/util/Set;add(Ljava/lang/Object;)Z"
     ))

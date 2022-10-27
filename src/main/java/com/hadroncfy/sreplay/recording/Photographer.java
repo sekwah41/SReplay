@@ -45,7 +45,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import static com.hadroncfy.sreplay.config.TextRenderer.render;
-import static com.hadroncfy.sreplay.command.SReplayCommand.getSenderUUID;
 
 public class Photographer extends ServerPlayer implements ISizeLimitExceededListener {
     public static final String MCPR = ".mcpr";
@@ -57,7 +56,7 @@ public class Photographer extends ServerPlayer implements ISizeLimitExceededList
     private final RecordingOption rparam;
     private int reconnectCount = 0;
     private long lastTablistUpdateTime;
-    private HackyClientConnection connection;
+    private HackyClientConnection hackyClientConnection;
     private Recorder recorder;
     private final File outputDir;
     private final List<Entity> trackedPlayers = new ArrayList<>();
@@ -86,7 +85,7 @@ public class Photographer extends ServerPlayer implements ISizeLimitExceededList
         ServerPlayerGameMode im = new ServerPlayerGameMode(world);
         Photographer ret = new Photographer(server, world, profile, im, outputDir, param);
         ret.setPos(pos.x, pos.y, pos.z);
-        ((PlayerManagerAccessor) server.getPlayerList()).getSaveHandler().save(ret);
+        ((PlayerManagerAccessor) server.getPlayerList()).getPlayerIo().save(ret);
         return ret;
     }
 
@@ -166,7 +165,7 @@ public class Photographer extends ServerPlayer implements ISizeLimitExceededList
             raw.mkdirs();
         }
         recorder = new Recorder(getGameProfile(), server, this::getWeather, new File(raw, recordingFileName), rparam);
-        connection = new HackyClientConnection(PacketFlow.CLIENTBOUND, recorder);
+        hackyClientConnection = new HackyClientConnection(PacketFlow.CLIENTBOUND, recorder);
 
         recorder.setOnSizeLimitExceededListener(this);
         recorder.start();
@@ -177,7 +176,7 @@ public class Photographer extends ServerPlayer implements ISizeLimitExceededList
         setHealth(20.0F);
         removed = false;
         trackedPlayers.clear();
-        server.getPlayerList().placeNewPlayer(connection, this);
+        server.getPlayerList().placeNewPlayer(hackyClientConnection, this);
         syncParams();
         gameMode.setGameModeForPlayer(MODE);// XXX: is this correct?
         getLevel().getChunkSource().move(this);

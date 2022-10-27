@@ -6,6 +6,6 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(ClientboundGameEventPacket.class)
 public interface GameStateChangeS2CPacketAccessor {
-    @Accessor("reason")
-    ClientboundGameEventPacket.Type getReason();
+    @Accessor("event")
+    ClientboundGameEventPacket.Type getEvent();
 }

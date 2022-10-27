@@ -7,6 +7,6 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(PlayerList.class)
 public interface PlayerManagerAccessor {
-    @Accessor("saveHandler")
-    PlayerDataStorage getSaveHandler();
+    @Accessor("playerIo")
+    PlayerDataStorage getPlayerIo();
 }

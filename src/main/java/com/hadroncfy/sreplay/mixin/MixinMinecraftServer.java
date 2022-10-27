@@ -14,11 +14,11 @@ import net.minecraft.server.MinecraftServer;
 public abstract class MixinMinecraftServer {
 
     @Shadow
-    public abstract boolean isDedicated();
+    public abstract boolean isDedicatedServer();
     
-    @Inject(method = "shutdown", at = @At("HEAD"))
+    @Inject(method = "stopServer", at = @At("HEAD"))
     public void onShutdown(CallbackInfo ci){
-        if (isDedicated()){
+        if (isDedicatedServer()){
             Photographer.killAllFakes((MinecraftServer)(Object)this, false);
         }
     }
