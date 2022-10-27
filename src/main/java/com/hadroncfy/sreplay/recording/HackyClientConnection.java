@@ -2,14 +2,14 @@ package com.hadroncfy.sreplay.recording;
 
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
-import net.minecraft.network.ClientConnection;
-import net.minecraft.network.NetworkSide;
-import net.minecraft.network.Packet;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.PacketFlow;
 
-public class HackyClientConnection extends ClientConnection {
+public class HackyClientConnection extends Connection {
     private IPacketListener p;
 
-    public HackyClientConnection(NetworkSide networkSide, IPacketListener p) {
+    public HackyClientConnection(PacketFlow networkSide, IPacketListener p) {
         super(networkSide);
         this.p = p;
     }
@@ -36,12 +36,12 @@ public class HackyClientConnection extends ClientConnection {
     }
 
     @Override
-    public boolean isOpen() {
+    public boolean isConnected() {
         return true;
     }
 
     @Override
-    public boolean isLocal() {
+    public boolean isMemoryConnection() {
         return true;
     }
 }

@@ -3,13 +3,11 @@ package com.hadroncfy.sreplay.config;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
-
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.TextComponent;
 import com.hadroncfy.sreplay.Util;
 import com.hadroncfy.sreplay.Util.Replacer;
-
-import net.minecraft.text.LiteralText;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
 
 public class TextRenderer extends AbstractTextRenderer<TextRenderer> implements Replacer<String> {
     private List<Object> vars = new ArrayList<>();
@@ -22,13 +20,13 @@ public class TextRenderer extends AbstractTextRenderer<TextRenderer> implements 
         return this;
     }
 
-    public Text render0(Text t){
+    public Component render0(Component t){
         return render(this, t);
     }
 
     @Override
-    protected MutableText renderString(String s) {
-        return new LiteralText(Util.replaceAll(VAL_EXP, s, this));
+    protected MutableComponent renderString(String s) {
+        return new TextComponent(Util.replaceAll(VAL_EXP, s, this));
     }
 
     @Override
@@ -43,7 +41,7 @@ public class TextRenderer extends AbstractTextRenderer<TextRenderer> implements 
         return a;
     }
 
-    public static Text render(Text template, Object ...vars){
+    public static Component render(Component template, Object ...vars){
         return new TextRenderer().var(vars).render0(template);
     }
 }

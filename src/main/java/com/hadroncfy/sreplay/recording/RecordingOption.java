@@ -7,8 +7,7 @@ import com.hadroncfy.sreplay.recording.param.Validator;
 import static com.hadroncfy.sreplay.SReplayMod.getFormats;
 
 import java.util.function.Consumer;
-
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 
 public class RecordingOption {
     @Option(
@@ -64,7 +63,7 @@ public class RecordingOption {
 
     private static class SizeLimitValidator implements Validator<Integer> {
         @Override
-        public boolean validate(Integer val, Consumer<Text> errorReceiver) {
+        public boolean validate(Integer val, Consumer<Component> errorReceiver) {
             if (val != -1 && val < 10){
                 errorReceiver.accept(getFormats().sizeLimitTooSmall);
                 return false;
@@ -75,7 +74,7 @@ public class RecordingOption {
 
     private static class TimeLimitValidator implements Validator<Integer> {
         @Override
-        public boolean validate(Integer val, Consumer<Text> errorReceiver) {
+        public boolean validate(Integer val, Consumer<Component> errorReceiver) {
             if (val != -1 && val < 10){
                 errorReceiver.accept(getFormats().timeLimitTooSmall);
                 return false;
@@ -86,7 +85,7 @@ public class RecordingOption {
 
     private static class PositiveValidator implements Validator<Integer> {
         @Override
-        public boolean validate(Integer val, Consumer<Text> errorReceiver) {
+        public boolean validate(Integer val, Consumer<Component> errorReceiver) {
             if (val <= 0){
                 errorReceiver.accept(getFormats().positiveParam);
                 return false;
@@ -97,7 +96,7 @@ public class RecordingOption {
 
     private static class NonNegativeOrMinus1 implements Validator<Integer> {
         @Override
-        public boolean validate(Integer val, Consumer<Text> errorReceiver) {
+        public boolean validate(Integer val, Consumer<Component> errorReceiver) {
             if (val != -1 && val < 0){
                 errorReceiver.accept(getFormats().nonNegativeOrMinusOne);
                 return false;

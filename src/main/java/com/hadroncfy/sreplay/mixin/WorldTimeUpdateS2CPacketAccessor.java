@@ -1,11 +1,10 @@
 package com.hadroncfy.sreplay.mixin;
 
+import net.minecraft.network.protocol.game.ClientboundSetTimePacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-import net.minecraft.network.packet.s2c.play.WorldTimeUpdateS2CPacket;
-
-@Mixin(WorldTimeUpdateS2CPacket.class)
+@Mixin(ClientboundSetTimePacket.class)
 public interface WorldTimeUpdateS2CPacketAccessor {
     @Accessor("time")
     long getTime();

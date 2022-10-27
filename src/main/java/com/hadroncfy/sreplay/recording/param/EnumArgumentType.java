@@ -11,7 +11,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 
-import static net.minecraft.command.CommandSource.suggestMatching;
+import static net.minecraft.commands.SharedSuggestionProvider.suggest;
 
 public class EnumArgumentType<T extends Enum<T>> implements ArgumentType<T> {
     private final Class<T> clazz;
@@ -32,7 +32,7 @@ public class EnumArgumentType<T extends Enum<T>> implements ArgumentType<T> {
 
     @Override
     public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
-        return suggestMatching(consts, builder);
+        return suggest(consts, builder);
     }
 
     @SuppressWarnings({"unchecked"})

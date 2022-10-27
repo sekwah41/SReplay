@@ -5,11 +5,9 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
-
+import net.minecraft.commands.CommandSourceStack;
 import com.hadroncfy.sreplay.SReplayMod;
 import com.hadroncfy.sreplay.config.TextRenderer;
-
-import net.minecraft.server.command.ServerCommandSource;
 
 public class ConfirmationManager {
     private static final Random random = new Random();
@@ -21,13 +19,14 @@ public class ConfirmationManager {
         this.codeBound = codeBound;
     }
 
-    public synchronized void submit(String label, ServerCommandSource src, Runnable h){
+    public synchronized void submit(String label, CommandSourceStack src, Runnable h){
         final int code = random.nextInt(codeBound);
-        src.sendFeedback(TextRenderer.render(SReplayMod.getFormats().confirmingHint, Integer.toString(code)), false);
+        //src.sendFeedback(TextRenderer.render(SReplayMod.getFormats().confirmingHint, Integer.toString(code)), false);
         ConfirmationEntry e = confirms.put(label, new ConfirmationEntry(src, label, code, h));
         if (e != null){
             e.t.cancel();
         }
+        this.confirm(label, code);
     }
 
     public synchronized boolean confirm(String label, int code){
@@ -39,7 +38,7 @@ public class ConfirmationManager {
                 confirms.remove(label);
             }
             else {
-                h.src.sendError(SReplayMod.getFormats().incorrectConfirmationCode);
+                h.src.sendFailure(SReplayMod.getFormats().incorrectConfirmationCode);
             }
             return true;
         }
@@ -51,7 +50,7 @@ public class ConfirmationManager {
         if (h != null){
             h.t.cancel();
             confirms.remove(label);
-            h.src.sendFeedback(SReplayMod.getFormats().operationCancelled, true);
+            h.src.sendSuccess(SReplayMod.getFormats().operationCancelled, true);
             return true;
         }
         return false;
@@ -64,11 +63,11 @@ public class ConfirmationManager {
 
     private class ConfirmationEntry extends TimerTask {
         final String label;
-        final ServerCommandSource src;
+        final CommandSourceStack src;
         final Runnable handler;
         final Timer t;
         final int code;
-        public ConfirmationEntry(ServerCommandSource src, String label, int code, Runnable h){
+        public ConfirmationEntry(CommandSourceStack src, String label, int code, Runnable h){
             this.src = src;
             this.label = label;
             this.handler = h;
@@ -81,7 +80,7 @@ public class ConfirmationManager {
         public void run() {
             synchronized(ConfirmationManager.this){
                 confirms.remove(label);
-                src.sendFeedback(SReplayMod.getFormats().operationCancelled, true);
+                src.sendSuccess(SReplayMod.getFormats().operationCancelled, true);
             }
         }
     }

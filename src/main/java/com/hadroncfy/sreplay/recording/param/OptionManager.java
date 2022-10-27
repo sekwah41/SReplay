@@ -17,14 +17,13 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-
-import net.minecraft.network.MessageType;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.ChatType;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.command.ServerCommandSource;
 
-import static net.minecraft.server.command.CommandManager.literal;
-import static net.minecraft.server.command.CommandManager.argument;
-import static net.minecraft.command.CommandSource.suggestMatching;
+import static net.minecraft.commands.Commands.literal;
+import static net.minecraft.commands.Commands.argument;
+import static net.minecraft.commands.SharedSuggestionProvider.suggest;
 
 import static com.hadroncfy.sreplay.SReplayMod.getFormats;
 
@@ -42,8 +41,8 @@ public class OptionManager {
         }
     }
 
-    public LiteralArgumentBuilder<ServerCommandSource> buildCommand() {
-        LiteralArgumentBuilder<ServerCommandSource> ret = literal("set");
+    public LiteralArgumentBuilder<CommandSourceStack> buildCommand() {
+        LiteralArgumentBuilder<CommandSourceStack> ret = literal("set");
         for (OptionEntry<?> entry : params.values()) {
             String name = entry.name;
             Executor cmd = new Executor(entry);
@@ -52,22 +51,22 @@ public class OptionManager {
         return ret;
     }
 
-    public LiteralArgumentBuilder<ServerCommandSource> buildHelpCommand(){
-        LiteralArgumentBuilder<ServerCommandSource> ret = literal("set")
+    public LiteralArgumentBuilder<CommandSourceStack> buildHelpCommand(){
+        LiteralArgumentBuilder<CommandSourceStack> ret = literal("set")
             .then(argument("param", StringArgumentType.word())
-                .suggests((src, sb) -> suggestMatching(params.keySet(), sb))
+                .suggests((src, sb) -> suggest(params.keySet(), sb))
                 .executes(ctx -> {
-                    ServerCommandSource src = ctx.getSource();
+                    CommandSourceStack src = ctx.getSource();
                     String name = StringArgumentType.getString(ctx, "param");
                     OptionEntry<?> entry = params.get(name);
                     if (entry != null){
-                        src.sendFeedback(render(getFormats().paramHelp, 
+                        src.sendSuccess(render(getFormats().paramHelp, 
                             name, 
                             Lang.getString(entry.desc)
                         ), false);
                     }
                     else {
-                        src.sendError(getFormats().noSuchParam);
+                        src.sendFailure(getFormats().noSuchParam);
                     }
                     return 0;
                 }));
@@ -76,7 +75,7 @@ public class OptionManager {
     }
 
     @SuppressWarnings({"rawtypes"})
-    private static RequiredArgumentBuilder<ServerCommandSource, ?> getArgument(OptionEntry<?> entry){
+    private static RequiredArgumentBuilder<CommandSourceStack, ?> getArgument(OptionEntry<?> entry){
         Class<?> type = entry.type;
         String name = entry.name;
         if (type.equals(boolean.class)) {
@@ -88,12 +87,12 @@ public class OptionManager {
             for (Object k: type.getEnumConstants()){
                 names.add(((Enum)k).name().toLowerCase());
             }
-            return argument(name, StringArgumentType.word()).suggests((c, b) -> suggestMatching(names, b));
+            return argument(name, StringArgumentType.word()).suggests((c, b) -> suggest(names, b));
         }
         return argument(name, StringArgumentType.word());
     }
 
-    private class Executor implements Command<ServerCommandSource> {
+    private class Executor implements Command<CommandSourceStack> {
         private final OptionEntry<?> entry;
 
         Executor(OptionEntry<?> entry) {
@@ -101,9 +100,9 @@ public class OptionManager {
         }
 
         @Override
-        public int run(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-            ServerCommandSource src = context.getSource();
-            MinecraftServer server = src.getMinecraftServer();
+        public int run(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+            CommandSourceStack src = context.getSource();
+            MinecraftServer server = src.getServer();
             String pname = StringArgumentType.getString(context, "player");
             Photographer player = Photographer.getFake(server, pname);
             if (player != null) {
@@ -111,19 +110,19 @@ public class OptionManager {
                     try {
                         if(entry.set(context, player.getRecordingParam())) {
                             player.syncParams();
-                            server.getPlayerManager().broadcastChatMessage(render(getFormats().setParam,
-                                src.getName(),
+                            server.getPlayerList().broadcastMessage(render(getFormats().setParam,
+                                src.getTextName(),
                                 player.getGameProfile().getName(),
                                 entry.name,
                                 entry.field.get(player.getRecordingParam()).toString()
-                            ), MessageType.CHAT, SReplayCommand.getSenderUUID(context));
+                            ), ChatType.CHAT, SReplayCommand.getSenderUUID(context));
                         }
                     }
                     catch(InvalidEnumException e){
-                        src.sendError(getFormats().invalidEnum);
+                        src.sendFailure(getFormats().invalidEnum);
                     }
                     catch(IllegalArgumentException e){
-                        src.sendFeedback(render(getFormats().getParam,
+                        src.sendSuccess(render(getFormats().getParam,
                             player.getGameProfile().getName(),
                             entry.name,
                             entry.field.get(player.getRecordingParam()).toString()
@@ -134,7 +133,7 @@ public class OptionManager {
                 }
             }
             else {
-                src.sendError(getFormats().playerNotFound);
+                src.sendFailure(getFormats().playerNotFound);
             }
             return 0;
         }

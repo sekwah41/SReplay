@@ -11,14 +11,13 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-
-import net.minecraft.network.MessageType;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.ChatType;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
-import static net.minecraft.server.command.CommandManager.literal;
+import static net.minecraft.commands.Commands.literal;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,8 +30,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 
-import static net.minecraft.server.command.CommandManager.argument;
-import static net.minecraft.command.CommandSource.suggestMatching;
+import static net.minecraft.commands.Commands.argument;
+import static net.minecraft.commands.SharedSuggestionProvider.suggest;
 import static com.hadroncfy.sreplay.recording.Photographer.MCPR;
 import static com.hadroncfy.sreplay.config.TextRenderer.render;
 import static com.hadroncfy.sreplay.SReplayMod.getConfig;
@@ -50,10 +49,10 @@ public class SReplayCommand {
 
     private static final ConfirmationManager cm = new ConfirmationManager(20000, 999);
 
-    public static void register(CommandDispatcher<ServerCommandSource> d) {
-        final LiteralArgumentBuilder<ServerCommandSource> b = literal("sreplay")
+    public static void register(CommandDispatcher<CommandSourceStack> d) {
+        final LiteralArgumentBuilder<CommandSourceStack> b = literal("sreplay")
             .then(literal("player").then(argument("player", StringArgumentType.word())
-                .suggests((src, sb) -> suggestMatching(Photographer.listFakes(src.getSource().getMinecraftServer()).stream().map(p -> p.getGameProfile().getName()), sb))
+                .suggests((src, sb) -> suggest(Photographer.listFakes(src.getSource().getServer()).stream().map(p -> p.getGameProfile().getName()), sb))
                 .then(literal("spawn").executes(SReplayCommand::playerSpawn))
                 .then(literal("kill").executes(SReplayCommand::playerKill))
                 .then(literal("respawn").executes(SReplayCommand::playerRespawn))
@@ -93,42 +92,42 @@ public class SReplayCommand {
         d.register(b);
     }
 
-    private static CompletableFuture<Suggestions> suggestRecordingFile(CommandContext<ServerCommandSource> src, SuggestionsBuilder sb){
-        return suggestMatching(SReplayMod.listRecordings().stream().map(File::getName), sb);
+    private static CompletableFuture<Suggestions> suggestRecordingFile(CommandContext<CommandSourceStack> src, SuggestionsBuilder sb){
+        return suggest(SReplayMod.listRecordings().stream().map(File::getName), sb);
     }
 
-    private static int simulateCrash(CommandContext<ServerCommandSource> ctx){
+    private static int simulateCrash(CommandContext<CommandSourceStack> ctx){
         throw new Error("manually triggered crash");
     }
 
-    private static int help(CommandContext<ServerCommandSource> ctx){
-        for (Text t: SReplayMod.getFormats().help){
-            ctx.getSource().sendFeedback(t, false);
+    private static int help(CommandContext<CommandSourceStack> ctx){
+        for (Component t: SReplayMod.getFormats().help){
+            ctx.getSource().sendSuccess(t, false);
         }
         return 0;
     }
 
-    private static int locate(CommandContext<ServerCommandSource> ctx){
+    private static int locate(CommandContext<CommandSourceStack> ctx){
         Photographer p = requirePlayer(ctx);
         if (p != null){
-            ctx.getSource().sendFeedback(render(getFormats().botLocation,
+            ctx.getSource().sendSuccess(render(getFormats().botLocation,
                 p.getGameProfile().getName(),
                 String.format("%.0f", p.getX()),
                 String.format("%.0f", p.getY()),
                 String.format("%.0f", p.getZ()),
-                p.getServerWorld().getRegistryKey().getValue().getPath()
+                p.getLevel().dimension().location().getPath()
             ), false);
         }
         return 0;
     }
 
-    private static <T> void paginate(CommandContext<ServerCommandSource> ctx, List<T> p, BiConsumer<Integer, T> consumer){
-        ServerCommandSource src = ctx.getSource();
+    private static <T> void paginate(CommandContext<CommandSourceStack> ctx, List<T> p, BiConsumer<Integer, T> consumer){
+        CommandSourceStack src = ctx.getSource();
         int page = tryGetArg(() -> IntegerArgumentType.getInteger(ctx, "page"), () -> 1) - 1;
         int s = getConfig().itemsPerPage;
         int start = page * s, end = start + s;
         if (start >= p.size() || start < 0 || end < 0){
-            ctx.getSource().sendError(getFormats().invalidPageNum);
+            ctx.getSource().sendFailure(getFormats().invalidPageNum);
             return;
         }
         if (end >= p.size()){
@@ -139,40 +138,40 @@ public class SReplayCommand {
             consumer.accept(i++, v);
         }
 
-        src.sendFeedback(render(getFormats().paginationFooter, page + 1, (int)Math.ceil(p.size() / (float)s)), false);
+        src.sendSuccess(render(getFormats().paginationFooter, page + 1, (int)Math.ceil(p.size() / (float)s)), false);
     }
 
-    private static int getMarkers(CommandContext<ServerCommandSource> ctx){
+    private static int getMarkers(CommandContext<CommandSourceStack> ctx){
         final Photographer p = requirePlayer(ctx);
         if (p != null){
             final String name = p.getGameProfile().getName();
-            final ServerCommandSource src = ctx.getSource();
+            final CommandSourceStack src = ctx.getSource();
 
-            src.sendFeedback(render(SReplayMod.getFormats().markerListTitle, name), false);
+            src.sendSuccess(render(SReplayMod.getFormats().markerListTitle, name), false);
             paginate(ctx, p.getRecorder().getMarkers(), (i, marker) -> {
-                src.sendFeedback(render(SReplayMod.getFormats().markerListItem, name, Integer.toString(i), marker.name), false);
+                src.sendSuccess(render(SReplayMod.getFormats().markerListItem, name, Integer.toString(i), marker.name), false);
             });
         }
         return 0;
     }
 
-    private static int removeMarker(CommandContext<ServerCommandSource> ctx){
+    private static int removeMarker(CommandContext<CommandSourceStack> ctx){
         final Photographer p = requirePlayer(ctx);
         if (p != null){
             final String name = p.getGameProfile().getName();
-            final ServerCommandSource src = ctx.getSource();
+            final CommandSourceStack src = ctx.getSource();
             final int id = IntegerArgumentType.getInteger(ctx, "markerId") - 1;
             if (id < 0 || id >= p.getRecorder().getMarkers().size()){
-                src.sendError(SReplayMod.getFormats().invalidMarkerId);
+                src.sendFailure(SReplayMod.getFormats().invalidMarkerId);
                 return 1;
             }
             p.getRecorder().removeMarker(id);
-            src.getMinecraftServer().getPlayerManager().broadcastChatMessage(render(SReplayMod.getFormats().markerRemoved, ctx.getSource().getName(), name, Integer.toString(id + 1)), MessageType.CHAT, getSenderUUID(ctx));
+            src.getServer().getPlayerList().broadcastMessage(render(SReplayMod.getFormats().markerRemoved, ctx.getSource().getTextName(), name, Integer.toString(id + 1)), ChatType.CHAT, getSenderUUID(ctx));
         }
         return 0;
     }
 
-    private static int getFile(CommandContext<ServerCommandSource> ctx){
+    private static int getFile(CommandContext<CommandSourceStack> ctx){
         final String fName = StringArgumentType.getString(ctx, "fileName");
         final File f = new File(SReplayMod.getConfig().savePath, fName);
         if (f.exists()){
@@ -183,26 +182,26 @@ public class SReplayCommand {
                 url += ":" + port;
             }
             url += path;
-            ctx.getSource().sendFeedback(render(SReplayMod.getFormats().downloadUrl, url), false);
+            ctx.getSource().sendSuccess(render(SReplayMod.getFormats().downloadUrl, url), false);
         }
         else {
-            ctx.getSource().sendError(render(SReplayMod.getFormats().fileNotFound, fName));
+            ctx.getSource().sendFailure(render(SReplayMod.getFormats().fileNotFound, fName));
             return 1;
         }
         return 0;
     }
 
-    private static int startServer(CommandContext<ServerCommandSource> ctx){
-        final ServerCommandSource src = ctx.getSource();
-        final MinecraftServer server = src.getMinecraftServer();
+    private static int startServer(CommandContext<CommandSourceStack> ctx){
+        final CommandSourceStack src = ctx.getSource();
+        final MinecraftServer server = src.getServer();
         try {
             final ChannelFuture ch = SReplayMod.getServer().bind(SReplayMod.getConfig().serverListenAddress, SReplayMod.getConfig().serverPort);
             ch.addListener(future -> {
                 if (future.isSuccess()){
-                    server.getPlayerManager().broadcastChatMessage(SReplayMod.getFormats().serverStarted, MessageType.CHAT, getSenderUUID(ctx));
+                    server.getPlayerList().broadcastMessage(SReplayMod.getFormats().serverStarted, ChatType.CHAT, getSenderUUID(ctx));
                 }
                 else {
-                    src.sendError(render(SReplayMod.getFormats().serverStartFailed, future.cause().getMessage()));
+                    src.sendFailure(render(SReplayMod.getFormats().serverStartFailed, future.cause().getMessage()));
                 }
             });
         }
@@ -212,57 +211,57 @@ public class SReplayCommand {
         return 0;
     }
 
-    private static int stopServer(CommandContext<ServerCommandSource> ctx){
-        final ServerCommandSource src = ctx.getSource();
-        final MinecraftServer server = src.getMinecraftServer();
+    private static int stopServer(CommandContext<CommandSourceStack> ctx){
+        final CommandSourceStack src = ctx.getSource();
+        final MinecraftServer server = src.getServer();
         final ChannelFuture ch = SReplayMod.getServer().stop();
         ch.addListener(future -> {
             if (future.isSuccess()){
-                server.getPlayerManager().broadcastChatMessage(SReplayMod.getFormats().serverStopped, MessageType.CHAT, getSenderUUID(ctx));
+                server.getPlayerList().broadcastMessage(SReplayMod.getFormats().serverStopped, ChatType.CHAT, getSenderUUID(ctx));
             }
             else {
-                src.sendError(render(SReplayMod.getFormats().serverStopFailed, future.cause().getMessage()));
+                src.sendFailure(render(SReplayMod.getFormats().serverStopFailed, future.cause().getMessage()));
             }
         });
         return 0;
     }
 
-    private static int getName(CommandContext<ServerCommandSource> ctx){
+    private static int getName(CommandContext<CommandSourceStack> ctx){
         Photographer p = requirePlayer(ctx);
         if (p != null){
-            ctx.getSource().sendFeedback(render(SReplayMod.getFormats().recordingFile, p.getGameProfile().getName(), p.getSaveName()), false);
+            ctx.getSource().sendSuccess(render(SReplayMod.getFormats().recordingFile, p.getGameProfile().getName(), p.getSaveName()), false);
             return 1;
         }
         return 0;
     }
 
-    private static int setName(CommandContext<ServerCommandSource> ctx){
+    private static int setName(CommandContext<CommandSourceStack> ctx){
         Photographer p = requirePlayer(ctx);
         if (p != null){
             String name = StringArgumentType.getString(ctx, "fileName");
             if (name.endsWith(MCPR)){
                 name = name.substring(0, name.length() - MCPR.length());
             }
-            if (Photographer.checkForSaveFileDupe(ctx.getSource().getMinecraftServer(), SReplayMod.getConfig().savePath, name)){
-                ctx.getSource().sendError(render(SReplayMod.getFormats().recordFileExists, name));
+            if (Photographer.checkForSaveFileDupe(ctx.getSource().getServer(), SReplayMod.getConfig().savePath, name)){
+                ctx.getSource().sendFailure(render(SReplayMod.getFormats().recordFileExists, name));
                 return 0;
             }
             p.setSaveName(name);
-            ctx.getSource().sendFeedback(render(SReplayMod.getFormats().renamedFile, ctx.getSource().getName(), p.getGameProfile().getName(), name), true);
+            ctx.getSource().sendSuccess(render(SReplayMod.getFormats().renamedFile, ctx.getSource().getTextName(), p.getGameProfile().getName(), name), true);
             return 1;
         }
         return 0;
     }
 
-    static Photographer requirePlayer(CommandContext<ServerCommandSource> ctx){
+    static Photographer requirePlayer(CommandContext<CommandSourceStack> ctx){
         String name = StringArgumentType.getString(ctx, "player");
-        Photographer p = SReplayMod.getFake(ctx.getSource().getMinecraftServer(), name);
+        Photographer p = SReplayMod.getFake(ctx.getSource().getServer(), name);
         if (p != null){
             return p;
         }
         else {
             try {
-                ctx.getSource().sendFeedback(render(SReplayMod.getConfig().formats.playerNotFound, name), true);
+                ctx.getSource().sendSuccess(render(SReplayMod.getConfig().formats.playerNotFound, name), true);
             }
             catch(Exception e){
                 e.printStackTrace();
@@ -271,12 +270,12 @@ public class SReplayCommand {
         }
     }
 
-    public static int marker(CommandContext<ServerCommandSource> ctx){
+    public static int marker(CommandContext<CommandSourceStack> ctx){
         Photographer p = requirePlayer(ctx);
         if (p != null){
             String name = StringArgumentType.getString(ctx, "marker");
             p.getRecorder().addMarker(name);
-            ctx.getSource().getMinecraftServer().getPlayerManager().broadcastChatMessage(render(SReplayMod.getFormats().markerAdded, ctx.getSource().getName(), p.getGameProfile().getName(), name), MessageType.CHAT, getSenderUUID(ctx));
+            ctx.getSource().getServer().getPlayerList().broadcastMessage(render(SReplayMod.getFormats().markerAdded, ctx.getSource().getTextName(), p.getGameProfile().getName(), name), ChatType.CHAT, getSenderUUID(ctx));
             return 1;
         }
         else {
@@ -284,11 +283,11 @@ public class SReplayCommand {
         }
     }
 
-    public static int pause(CommandContext<ServerCommandSource> ctx){
+    public static int pause(CommandContext<CommandSourceStack> ctx){
         Photographer p = requirePlayer(ctx);
         if (p != null){
             p.setPaused(true);
-            ctx.getSource().getMinecraftServer().getPlayerManager().broadcastChatMessage(render(SReplayMod.getFormats().recordingPaused, ctx.getSource().getName(), p.getGameProfile().getName()), MessageType.CHAT, getSenderUUID(ctx));
+            ctx.getSource().getServer().getPlayerList().broadcastMessage(render(SReplayMod.getFormats().recordingPaused, ctx.getSource().getTextName(), p.getGameProfile().getName()), ChatType.CHAT, getSenderUUID(ctx));
             return 1;
         }
         else {
@@ -296,11 +295,11 @@ public class SReplayCommand {
         }
     }
 
-    public static int resume(CommandContext<ServerCommandSource> ctx){
+    public static int resume(CommandContext<CommandSourceStack> ctx){
         Photographer p = requirePlayer(ctx);
         if (p != null){
             p.setPaused(false);
-            ctx.getSource().getMinecraftServer().getPlayerManager().broadcastChatMessage(render(SReplayMod.getFormats().recordingResumed, ctx.getSource().getName(), p.getGameProfile().getName()), MessageType.CHAT, getSenderUUID(ctx));
+            ctx.getSource().getServer().getPlayerList().broadcastMessage(render(SReplayMod.getFormats().recordingResumed, ctx.getSource().getTextName(), p.getGameProfile().getName()), ChatType.CHAT, getSenderUUID(ctx));
             return 1;
         }
         else {
@@ -308,111 +307,111 @@ public class SReplayCommand {
         }
     }
 
-    public static int reload(CommandContext<ServerCommandSource> ctx){
+    public static int reload(CommandContext<CommandSourceStack> ctx){
         try {
             SReplayMod.loadConfig();
-            ctx.getSource().sendFeedback(render(SReplayMod.getFormats().reloadedConfig), false);
+            ctx.getSource().sendSuccess(render(SReplayMod.getFormats().reloadedConfig), false);
             return 1;
         } catch (IOException | JsonParseException e) {
             e.printStackTrace();
-            ctx.getSource().sendFeedback(render(SReplayMod.getFormats().failedToReloadConfig, e.toString()), false);
+            ctx.getSource().sendSuccess(render(SReplayMod.getFormats().failedToReloadConfig, e.toString()), false);
             return 0;
         }
     }
 
-    public static int confirm(CommandContext<ServerCommandSource> ctx) {
+    public static int confirm(CommandContext<CommandSourceStack> ctx) {
         final int code = IntegerArgumentType.getInteger(ctx, "code");
-        if (!cm.confirm(ctx.getSource().getName(), code)) {
-            ctx.getSource().sendFeedback(SReplayMod.getFormats().nothingToConfirm, false);
+        if (!cm.confirm(ctx.getSource().getTextName(), code)) {
+            ctx.getSource().sendSuccess(SReplayMod.getFormats().nothingToConfirm, false);
         }
 
         return 0;
     }
 
-    public static int cancel(CommandContext<ServerCommandSource> ctx) {
-        if (!cm.cancel(ctx.getSource().getName())) {
-            ctx.getSource().sendFeedback(SReplayMod.getFormats().nothingToCancel, false);
+    public static int cancel(CommandContext<CommandSourceStack> ctx) {
+        if (!cm.cancel(ctx.getSource().getTextName())) {
+            ctx.getSource().sendSuccess(SReplayMod.getFormats().nothingToCancel, false);
         }
         return 0;
     }
 
-    public static int listRecordings(CommandContext<ServerCommandSource> ctx) {
-        final ServerCommandSource src = ctx.getSource();
-        src.sendFeedback(SReplayMod.getFormats().recordingFileListHead, false);
+    public static int listRecordings(CommandContext<CommandSourceStack> ctx) {
+        final CommandSourceStack src = ctx.getSource();
+        src.sendSuccess(SReplayMod.getFormats().recordingFileListHead, false);
 
         paginate(ctx, SReplayMod.listRecordings(), (i, f) -> {
             String size = String.format("%.2f", f.length() / 1024F / 1024F);
-            src.sendFeedback(render(SReplayMod.getFormats().recordingFileItem, f.getName(), size), false);
+            src.sendSuccess(render(SReplayMod.getFormats().recordingFileItem, f.getName(), size), false);
         });
         
         return 0;
     }
 
-    public static int deleteRecording(CommandContext<ServerCommandSource> ctx) {
-        final ServerCommandSource src = ctx.getSource();
+    public static int deleteRecording(CommandContext<CommandSourceStack> ctx) {
+        final CommandSourceStack src = ctx.getSource();
         final File rec = new File(SReplayMod.getConfig().savePath, StringArgumentType.getString(ctx, "recording"));
-        final MinecraftServer server = src.getMinecraftServer();
+        final MinecraftServer server = src.getServer();
         if (rec.exists()) {
-            src.sendFeedback(render(SReplayMod.getFormats().aboutToDeleteRecording, rec.getName()), true);
-            cm.submit(src.getName(), src, () -> {
+            src.sendSuccess(render(SReplayMod.getFormats().aboutToDeleteRecording, rec.getName()), true);
+            cm.submit(src.getTextName(), src, () -> {
                 try {
                     Files.delete(rec.toPath());
-                    server.getPlayerManager()
-                        .broadcastChatMessage(render(SReplayMod.getFormats().deletedRecordingFile, src.getName(), rec.getName()), MessageType.CHAT, getSenderUUID(ctx));
+                    server.getPlayerList()
+                        .broadcastMessage(render(SReplayMod.getFormats().deletedRecordingFile, src.getTextName(), rec.getName()), ChatType.CHAT, getSenderUUID(ctx));
                 } catch (IOException e) {
                     e.printStackTrace();
-                    server.getPlayerManager().broadcastChatMessage(render(
+                    server.getPlayerList().broadcastMessage(render(
                         SReplayMod.getFormats().failedToDeleteRecordingFile,
-                        src.getName(),
+                        src.getTextName(),
                         rec.getName(),
                         e
-                    ), MessageType.CHAT, getSenderUUID(ctx));
+                    ), ChatType.CHAT, getSenderUUID(ctx));
                 }
             });
         } else {
-            src.sendFeedback(render(SReplayMod.getFormats().fileNotFound, rec.getName()), true);
+            src.sendSuccess(render(SReplayMod.getFormats().fileNotFound, rec.getName()), true);
         }
         return 0;
     }
 
-    public static UUID getSenderUUID(CommandContext<ServerCommandSource> ctx){
+    public static UUID getSenderUUID(CommandContext<CommandSourceStack> ctx){
         try {
-            return ctx.getSource().getPlayer().getUuid();
+            return ctx.getSource().getPlayerOrException().getUUID();
         }
         catch(CommandSyntaxException e){
             return UUID.randomUUID();
         }
     }
 
-    public static int playerTp(CommandContext<ServerCommandSource> ctx) {
+    public static int playerTp(CommandContext<CommandSourceStack> ctx) {
         final Photographer p = requirePlayer(ctx);
         if (p != null){
-            Vec3d pos = ctx.getSource().getPosition();
-            p.tp(ctx.getSource().getWorld().getRegistryKey(), pos.x, pos.y, pos.z);
-            ctx.getSource().getMinecraftServer().getPlayerManager().broadcastChatMessage(render(SReplayMod.getFormats().teleportedBotToYou, p.getGameProfile().getName(), ctx.getSource().getName()), MessageType.CHAT, getSenderUUID(ctx));
-            LOGGER.info("Teleported {} to {}", p.getGameProfile().getName(), ctx.getSource().getName());
+            Vec3 pos = ctx.getSource().getPosition();
+            p.tp(ctx.getSource().getLevel().dimension(), pos.x, pos.y, pos.z);
+            ctx.getSource().getServer().getPlayerList().broadcastMessage(render(SReplayMod.getFormats().teleportedBotToYou, p.getGameProfile().getName(), ctx.getSource().getTextName()), ChatType.CHAT, getSenderUUID(ctx));
+            LOGGER.info("Teleported {} to {}", p.getGameProfile().getName(), ctx.getSource().getTextName());
             return 1;
         }
 
         return 0;
     }
 
-    public static int playerSpawn(CommandContext<ServerCommandSource> ctx) {
+    public static int playerSpawn(CommandContext<CommandSourceStack> ctx) {
         final String pName = StringArgumentType.getString(ctx, "player");
-        final ServerCommandSource src = ctx.getSource();
-        final MinecraftServer server = src.getMinecraftServer();
+        final CommandSourceStack src = ctx.getSource();
+        final MinecraftServer server = src.getServer();
 
         Matcher m = SReplayMod.getConfig().playerNamePattern.matcher(pName);
         if (!m.matches()) {
-            src.sendFeedback(SReplayMod.getFormats().invalidPlayerName, true);
+            src.sendSuccess(SReplayMod.getFormats().invalidPlayerName, true);
             return 0;
         }
         if (pName.length() > 16) {
-            src.sendFeedback(SReplayMod.getFormats().playerNameTooLong, true);
+            src.sendSuccess(SReplayMod.getFormats().playerNameTooLong, true);
             return 0;
         }
-        if (server.getPlayerManager().getPlayer(pName) != null) {
-            src.sendFeedback(render(SReplayMod.getFormats().playerIsLoggedIn, pName), true);
+        if (server.getPlayerList().getPlayerByName(pName) != null) {
+            src.sendSuccess(render(SReplayMod.getFormats().playerIsLoggedIn, pName), true);
             return 0;
         }
 
@@ -425,32 +424,32 @@ public class SReplayCommand {
         }
 
         try {
-            Photographer photographer = Photographer.create(pName, server, src.getWorld().getRegistryKey(), src.getPosition(), SReplayMod.getConfig().savePath);
+            Photographer photographer = Photographer.create(pName, server, src.getLevel().dimension(), src.getPosition(), SReplayMod.getConfig().savePath);
             photographer.connect(saveName);
         } catch (IOException e) {
-            src.sendFeedback(render(SReplayMod.getFormats().failedToStartRecording, e.toString()), false);
+            src.sendSuccess(render(SReplayMod.getFormats().failedToStartRecording, e.toString()), false);
             e.printStackTrace();
         }
         return 1;
     }
 
-    public static int playerKill(CommandContext<ServerCommandSource> ctx) {
+    public static int playerKill(CommandContext<CommandSourceStack> ctx) {
         final Photographer p = requirePlayer(ctx);
-        ServerCommandSource src = ctx.getSource();
+        CommandSourceStack src = ctx.getSource();
         if (p != null){
-            src.sendFeedback(render(getFormats().killConfirm, p.getGameProfile().getName()), false);
-            cm.submit(src.getName(), src, p::kill);
+            src.sendSuccess(render(getFormats().killConfirm, p.getGameProfile().getName()), false);
+            cm.submit(src.getTextName(), src, p::kill);
             return 1;
         }
         return 0;
     }
 
-    public static int playerRespawn(CommandContext<ServerCommandSource> ctx) throws CommandSyntaxException {
+    public static int playerRespawn(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         final Photographer p = requirePlayer(ctx);
-        ServerCommandSource src = ctx.getSource();
+        CommandSourceStack src = ctx.getSource();
         if (p != null) {
-            src.sendFeedback(render(getFormats().killConfirm, p.getGameProfile().getName()), false);
-            cm.submit(src.getName(), src, p::reconnect);
+            src.sendSuccess(render(getFormats().killConfirm, p.getGameProfile().getName()), false);
+            cm.submit(src.getTextName(), src, p::reconnect);
             return 1;
         }
         return 0;

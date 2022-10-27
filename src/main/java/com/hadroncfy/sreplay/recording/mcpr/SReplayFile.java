@@ -24,10 +24,10 @@ import com.google.gson.GsonBuilder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.minecraft.SharedConstants;
-import net.minecraft.network.NetworkSide;
-import net.minecraft.network.NetworkState;
-import net.minecraft.network.Packet;
-import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.ConnectionProtocol;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.PacketFlow;
 
 public class SReplayFile implements IReplayFile {
     private static final String RECORDING_FILE = "recording.tmcpr";
@@ -74,10 +74,10 @@ public class SReplayFile implements IReplayFile {
     }
 
     private byte[] getPacketBytes(Packet<?> packet, boolean isLogin) throws Exception {
-        NetworkState nstate = isLogin ? NetworkState.LOGIN : NetworkState.PLAY;
-        int packetID = nstate.getPacketId(NetworkSide.CLIENTBOUND, packet);
+        ConnectionProtocol nstate = isLogin ? ConnectionProtocol.LOGIN : ConnectionProtocol.PLAY;
+        int packetID = nstate.getPacketId(PacketFlow.CLIENTBOUND, packet);
         ByteBuf bbuf = Unpooled.buffer();
-        PacketByteBuf packetBuf = new PacketByteBuf(bbuf);
+        FriendlyByteBuf packetBuf = new FriendlyByteBuf(bbuf);
         packetBuf.writeVarInt(packetID);
         packet.write(packetBuf);
 
@@ -92,7 +92,7 @@ public class SReplayFile implements IReplayFile {
     public void saveMetaData(Metadata data) throws IOException {
         data.fileFormat = "MCPR";
         data.fileFormatVersion = Metadata.CURRENT_FILE_FORMAT_VERSION;
-        data.protocol = SharedConstants.getGameVersion().getProtocolVersion();
+        data.protocol = SharedConstants.getCurrentVersion().getProtocolVersion();
 
         try (Writer writer = new OutputStreamWriter(new FileOutputStream(metaFile), StandardCharsets.UTF_8)){
             writer.write(META_GSON.toJson(data));

@@ -3,19 +3,17 @@ package com.hadroncfy.sreplay.config;
 import java.io.File;
 import java.net.InetAddress;
 import java.util.regex.Pattern;
-
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.util.LowerCaseEnumTypeAdapterFactory;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.util.LowercaseEnumTypeAdapterFactory;
-
 public class Config {
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting()
-        .registerTypeHierarchyAdapter(Text.class, new Text.Serializer())
+        .registerTypeHierarchyAdapter(Component.class, new Component.Serializer())
         .registerTypeHierarchyAdapter(Style.class, new Style.Serializer())
-        .registerTypeAdapterFactory(new LowercaseEnumTypeAdapterFactory())
+        .registerTypeAdapterFactory(new LowerCaseEnumTypeAdapterFactory())
         .registerTypeAdapter(Pattern.class, new PatternSerializer())
         .registerTypeAdapter(File.class, new FileSerializer()).create();
 

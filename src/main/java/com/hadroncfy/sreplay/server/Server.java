@@ -5,7 +5,7 @@ import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-
+import net.minecraft.util.LazyLoadedValue;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 
@@ -24,14 +24,13 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.stream.ChunkedWriteHandler;
-import net.minecraft.util.Lazy;
 
 public class Server {
     // Stolen from ServerNetworkIo
-    public static final Lazy<NioEventLoopGroup> DEFAULT_CHANNEL = new Lazy<>(() -> {
+    public static final LazyLoadedValue<NioEventLoopGroup> DEFAULT_CHANNEL = new LazyLoadedValue<>(() -> {
         return new NioEventLoopGroup(0, (new ThreadFactoryBuilder()).setNameFormat("Netty Server IO #%d").setDaemon(true).build());
     });
-    public static final Lazy<EpollEventLoopGroup> EPOLL_CHANNEL = new Lazy<>(() -> {
+    public static final LazyLoadedValue<EpollEventLoopGroup> EPOLL_CHANNEL = new LazyLoadedValue<>(() -> {
         return new EpollEventLoopGroup(0, (new ThreadFactoryBuilder()).setNameFormat("Netty Epoll Server IO #%d").setDaemon(true).build());
     });
 
@@ -41,7 +40,7 @@ public class Server {
 
     public synchronized ChannelFuture bind(InetAddress address, int port){
         Class<? extends ServerSocketChannel> clazz;
-        Lazy<? extends MultithreadEventLoopGroup> lazy;
+        LazyLoadedValue<? extends MultithreadEventLoopGroup> lazy;
         if (Epoll.isAvailable()){
             clazz = EpollServerSocketChannel.class;
             lazy = EPOLL_CHANNEL;

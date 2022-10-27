@@ -6,21 +6,20 @@ import java.util.TimerTask;
 import com.hadroncfy.sreplay.SReplayMod;
 import com.hadroncfy.sreplay.config.TextRenderer;
 import com.hadroncfy.sreplay.recording.mcpr.ProgressBar;
-
-import net.minecraft.entity.boss.BossBar;
-import net.minecraft.entity.boss.ServerBossBar;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerBossEvent;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.BossEvent;
 
-public class RecordingSaveProgressBar extends ServerBossBar implements ProgressBar {
+public class RecordingSaveProgressBar extends ServerBossEvent implements ProgressBar {
     private final MinecraftServer server;
     public RecordingSaveProgressBar(MinecraftServer server, String recordingName) {
         super(TextRenderer.render(SReplayMod.getFormats().saveRecordingProgressBarTitle, recordingName), 
-            BossBar.Color.GREEN, 
-            BossBar.Style.PROGRESS
+            BossEvent.BossBarColor.GREEN, 
+            BossEvent.BossBarOverlay.PROGRESS
         );
         setPercent(0);
-        for (ServerPlayerEntity player: server.getPlayerManager().getPlayerList()){
+        for (ServerPlayer player: server.getPlayerList().getPlayers()){
             addPlayer(player);
         }
         this.server = server;
@@ -41,7 +40,7 @@ public class RecordingSaveProgressBar extends ServerBossBar implements ProgressB
         new Timer().schedule(new TimerTask(){
             @Override
             public void run() {
-                clearPlayers();
+                removeAllPlayers();
             }
         }, 2000);
     }

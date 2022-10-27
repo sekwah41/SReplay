@@ -3,8 +3,7 @@ package com.hadroncfy.sreplay.recording.mcpr;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-
-import net.minecraft.network.Packet;
+import net.minecraft.network.protocol.Packet;
 
 public interface IReplayFile {
     void saveMetaData(Metadata data) throws IOException;

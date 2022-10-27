@@ -2,8 +2,7 @@ package com.hadroncfy.sreplay;
 
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-
+import net.minecraft.server.level.ServerPlayer;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -32,7 +31,7 @@ public class SReplayMod implements ModInitializer {
     private static final Server downloadServer = new Server();
 
     public static Photographer getFake(MinecraftServer server, String name) {
-        ServerPlayerEntity player = server.getPlayerManager().getPlayer(name);
+        ServerPlayer player = server.getPlayerList().getPlayerByName(name);
         if (player instanceof Photographer) {
             return (Photographer) player;
         }

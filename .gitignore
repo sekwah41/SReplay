@@ -3,6 +3,7 @@
 .classpath
 .vscode
 .settings
+.idea
 .project
 run
 bin

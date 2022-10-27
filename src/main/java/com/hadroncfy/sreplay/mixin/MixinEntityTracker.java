@@ -6,15 +6,13 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ThreadedAnvilChunkStorage;
-
 import static com.hadroncfy.sreplay.recording.Photographer.getRealViewDistance;
 
 import java.util.Set;
-
+import net.minecraft.server.level.ChunkMap;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import com.hadroncfy.sreplay.recording.Photographer;
 
 @Mixin(targets = "net.minecraft.server.world.ThreadedAnvilChunkStorage$EntityTracker")
@@ -26,7 +24,7 @@ public class MixinEntityTracker {
         value = "INVOKE",
         target = "Lnet/minecraft/server/world/ThreadedAnvilChunkStorage;method_18725(Lnet/minecraft/server/world/ThreadedAnvilChunkStorage;)I"
     ))
-    private int getViewDistance(ThreadedAnvilChunkStorage cela, ServerPlayerEntity player){
+    private int getViewDistance(ChunkMap cela, ServerPlayer player){
         return getRealViewDistance(player, ((ThreadedAnvilChunkStorageAccessor)cela).getWatchDistance());
     }
 

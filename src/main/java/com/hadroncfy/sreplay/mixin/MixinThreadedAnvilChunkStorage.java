@@ -1,31 +1,29 @@
 package com.hadroncfy.sreplay.mixin;
 
 import com.hadroncfy.sreplay.recording.Photographer;
-
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.server.level.ChunkMap;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ChunkPos;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-import net.minecraft.network.Packet;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ThreadedAnvilChunkStorage;
-import net.minecraft.util.math.ChunkPos;
-
 import static com.hadroncfy.sreplay.recording.Photographer.getRealViewDistance;
 
-@Mixin(ThreadedAnvilChunkStorage.class)
+@Mixin(ChunkMap.class)
 public abstract class MixinThreadedAnvilChunkStorage {
     @Shadow private int watchDistance;
 
     @Shadow
-    private static int getChebyshevDistance(ChunkPos pos, ServerPlayerEntity player, boolean useCameraPosition){ return 0; }
+    private static int getChebyshevDistance(ChunkPos pos, ServerPlayer player, boolean useCameraPosition){ return 0; }
 
     @Redirect(method = "method_18707", at = @At(
         value = "FIELD",
         target = "Lnet/minecraft/server/world/ThreadedAnvilChunkStorage;watchDistance:I"
     ))
-    private int getWatchDistance$lambda0$getPlayersWatchingChunk(ThreadedAnvilChunkStorage cela, ChunkPos pos, boolean bl, ServerPlayerEntity player){
+    private int getWatchDistance$lambda0$getPlayersWatchingChunk(ChunkMap cela, ChunkPos pos, boolean bl, ServerPlayer player){
         return getRealViewDistance(player, watchDistance);
     }
 
@@ -33,7 +31,7 @@ public abstract class MixinThreadedAnvilChunkStorage {
         value = "FIELD",
         target = "Lnet/minecraft/server/world/ThreadedAnvilChunkStorage;watchDistance:I"
     ))
-    private int getWatchDistance$lambda0$setViewDistance(ThreadedAnvilChunkStorage cela, ChunkPos pos, int previousViewDistance, Packet<?>[] packets, ServerPlayerEntity player){
+    private int getWatchDistance$lambda0$setViewDistance(ChunkMap cela, ChunkPos pos, int previousViewDistance, Packet<?>[] packets, ServerPlayer player){
         return getRealViewDistance(player, watchDistance);
     }
     
@@ -41,7 +39,7 @@ public abstract class MixinThreadedAnvilChunkStorage {
         value = "FIELD",
         target = "Lnet/minecraft/server/world/ThreadedAnvilChunkStorage;watchDistance:I"
     ))
-    private int getCurrentWatchDistance(ThreadedAnvilChunkStorage cela, ServerPlayerEntity player) {
+    private int getCurrentWatchDistance(ChunkMap cela, ServerPlayer player) {
         if (player instanceof Photographer){
             return ((Photographer)player).getCurrentWatchDistance();
         }

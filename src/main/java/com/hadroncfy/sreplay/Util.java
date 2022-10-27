@@ -6,13 +6,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.hadroncfy.sreplay.recording.Photographer;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.LiteralText;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.server.level.ServerPlayer;
 
 public class Util {
     // Stolen from fabric-carpet
@@ -35,13 +34,13 @@ public class Util {
         }
     }
 
-    public static Text makeBroadcastMsg(String player, String msg){
-        return new LiteralText("[" + player + ": " + msg + "]").setStyle(Style.EMPTY.withItalic(true).withColor(Formatting.DARK_GRAY));
+    public static Component makeBroadcastMsg(String player, String msg){
+        return new TextComponent("[" + player + ": " + msg + "]").setStyle(Style.EMPTY.withItalic(true).withColor(ChatFormatting.DARK_GRAY));
     }
 
     public static Collection<Photographer> getFakes(MinecraftServer server){
         Collection<Photographer> ret = new ArrayList<>();
-        for (ServerPlayerEntity player: server.getPlayerManager().getPlayerList()){
+        for (ServerPlayer player: server.getPlayerList().getPlayers()){
             if (player instanceof Photographer){
                 ret.add((Photographer) player);
             }
@@ -50,7 +49,7 @@ public class Util {
     }
 
     public static Photographer getFake(MinecraftServer server, String name){
-        ServerPlayerEntity player = server.getPlayerManager().getPlayer(name);
+        ServerPlayer player = server.getPlayerList().getPlayerByName(name);
         if (player != null && player instanceof Photographer){
             return (Photographer) player;
         }

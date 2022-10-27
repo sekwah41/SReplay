@@ -4,11 +4,9 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
-
+import net.minecraft.commands.CommandSourceStack;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
-
-import net.minecraft.server.command.ServerCommandSource;
 
 public class OptionEntry<T> {
     // public final Class<T> clazz;
@@ -41,10 +39,10 @@ public class OptionEntry<T> {
         }
     }
 
-    private boolean setVal(ServerCommandSource src, Object param, T val)
+    private boolean setVal(CommandSourceStack src, Object param, T val)
             throws IllegalArgumentException, IllegalAccessException {
         for (Validator<T> v : validators) {
-            if (!v.validate(val, src::sendError)) {
+            if (!v.validate(val, src::sendFailure)) {
                 return false;
             }
         }
@@ -53,9 +51,9 @@ public class OptionEntry<T> {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public boolean set(CommandContext<ServerCommandSource> ctx, Object param)
+    public boolean set(CommandContext<CommandSourceStack> ctx, Object param)
             throws IllegalArgumentException, IllegalAccessException, InvalidEnumException {
-        ServerCommandSource src = ctx.getSource();
+        CommandSourceStack src = ctx.getSource();
         T val;
         if (!type.isEnum()){
             val = ctx.getArgument(name, type);
