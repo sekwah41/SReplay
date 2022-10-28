@@ -2,6 +2,7 @@ package com.hadroncfy.sreplay.mixin;
 
 import com.hadroncfy.sreplay.command.SReplayCommand;
 import com.mojang.brigadier.CommandDispatcher;
+import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import org.spongepowered.asm.mixin.Final;
@@ -18,7 +19,7 @@ public abstract class MixinCommandManager {
     private CommandDispatcher<CommandSourceStack> dispatcher;
 
     @Inject(method = "<init>", at = @At("RETURN"))
-    private void onRegister(Commands.CommandSelection env, CallbackInfo ci) {
+    private void onRegister(Commands.CommandSelection commandSelection, CommandBuildContext commandBuildContext, CallbackInfo ci) {
         SReplayCommand.register(dispatcher);
     }
 }

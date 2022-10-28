@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.regex.Pattern;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.TextComponent;
 import com.hadroncfy.sreplay.Util;
 import com.hadroncfy.sreplay.Util.Replacer;
 
@@ -26,7 +25,7 @@ public class TextRenderer extends AbstractTextRenderer<TextRenderer> implements 
 
     @Override
     protected MutableComponent renderString(String s) {
-        return new TextComponent(Util.replaceAll(VAL_EXP, s, this));
+        return Component.literal(Util.replaceAll(VAL_EXP, s, this));
     }
 
     @Override

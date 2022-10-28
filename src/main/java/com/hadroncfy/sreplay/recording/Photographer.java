@@ -10,19 +10,21 @@ import java.util.concurrent.CompletableFuture;
 
 import com.hadroncfy.sreplay.SReplayMod;
 import com.hadroncfy.sreplay.config.TextRenderer;
+import com.hadroncfy.sreplay.mixin.EntityRemovedAccessor;
 import com.hadroncfy.sreplay.mixin.PlayerManagerAccessor;
 import com.hadroncfy.sreplay.mixin.ThreadedAnvilChunkStorageAccessor;
 import com.hadroncfy.sreplay.recording.param.OptionManager;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.SectionPos;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket.Action;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
@@ -35,12 +37,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerPlayerGameMode;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.BiomeManager;
 import net.minecraft.world.phys.Vec3;
+import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -59,15 +61,14 @@ public class Photographer extends ServerPlayer implements ISizeLimitExceededList
     private HackyClientConnection hackyClientConnection;
     private Recorder recorder;
     private final File outputDir;
-    private final List<Entity> trackedPlayers = new ArrayList<>();
+    public final List<Entity> trackedPlayers = new ArrayList<>();
     private int currentWatchDistance;
     private boolean userPaused = false;
 
     private String recordingFileName, saveFileName;
 
-    public Photographer(MinecraftServer server, ServerLevel world, GameProfile profile,
-            ServerPlayerGameMode im, File outputDir, RecordingOption param) {
-        super(server, world, profile, im);
+    public Photographer(MinecraftServer server, ServerLevel world, GameProfile profile, File outputDir, RecordingOption param) {
+        super(server, world, profile, null);
         currentWatchDistance = server.getPlayerList().getViewDistance();
         rparam = param;
         this.outputDir = outputDir;
@@ -75,15 +76,14 @@ public class Photographer extends ServerPlayer implements ISizeLimitExceededList
 
     public Photographer(MinecraftServer server, ServerLevel world, GameProfile profile,
             ServerPlayerGameMode im, File outputDir) {
-        this(server, world, profile, im, outputDir, new RecordingOption());
+        this(server, world, profile, outputDir, new RecordingOption());
     }
 
     public static Photographer create(String name, MinecraftServer server, ResourceKey<Level> dim, Vec3 pos, File outputDir,
             RecordingOption param) {
-        GameProfile profile = new GameProfile(Player.createPlayerUUID(name), name);
+        GameProfile profile = new GameProfile(UUIDUtil.createOfflinePlayerUUID(name), name);
         ServerLevel world = server.getLevel(dim);
-        ServerPlayerGameMode im = new ServerPlayerGameMode(world);
-        Photographer ret = new Photographer(server, world, profile, im, outputDir, param);
+        Photographer ret = new Photographer(server, world, profile, outputDir, param);
         ret.setPos(pos.x, pos.y, pos.z);
         ((PlayerManagerAccessor) server.getPlayerList()).getPlayerIo().save(ret);
         return ret;
@@ -147,7 +147,7 @@ public class Photographer extends ServerPlayer implements ISizeLimitExceededList
             for (int z = z0 - r; z <= z0 + r; z++) {
                 ChunkPos pos1 = new ChunkPos(x, z);
                 int d = getChebyshevDistance(pos1, x0, z0);
-                acc.sendWatchPackets2(this, pos1, new Packet[2], d <= oldDistance && d > newDistance,
+                acc.updateChunkTracking2(this, pos1, new MutableObject<ClientboundLevelChunkWithLightPacket>(), d <= oldDistance && d > newDistance,
                         d > oldDistance && d <= newDistance);
             }
         }
@@ -174,11 +174,11 @@ public class Photographer extends ServerPlayer implements ISizeLimitExceededList
         userPaused = false;
 
         setHealth(20.0F);
-        removed = false;
+        ((EntityRemovedAccessor) (Object) this).setRemovalReason(null);
         trackedPlayers.clear();
         server.getPlayerList().placeNewPlayer(hackyClientConnection, this);
         syncParams();
-        gameMode.setGameModeForPlayer(MODE);// XXX: is this correct?
+        gameMode.changeGameModeForPlayer(MODE);// XXX: is this correct?
         getLevel().getChunkSource().move(this);
 
         int d = this.server.getPlayerList().getViewDistance();
@@ -227,7 +227,10 @@ public class Photographer extends ServerPlayer implements ISizeLimitExceededList
         return entity.getClass() == ServerPlayer.class;
     }
 
-    @Override
+    /**
+     * These were moved into ServerEntity
+     */
+    /*@Override
     public void cancelRemoveEntity(Entity entity) {
         super.cancelRemoveEntity(entity);
         if (isRealPlayer(entity)) {
@@ -243,9 +246,9 @@ public class Photographer extends ServerPlayer implements ISizeLimitExceededList
             trackedPlayers.remove(entity);
             updatePause();
         }
-    }
+    }*/
 
-    private void updatePause() {
+    public void updatePause() {
         if (!recorder.isStopped()) {
             if (userPaused) {
                 recorder.pauseRecording();
@@ -253,11 +256,11 @@ public class Photographer extends ServerPlayer implements ISizeLimitExceededList
                 final String name = getGameProfile().getName();
                 if (trackedPlayers.isEmpty() && !recorder.isRecordingPaused()) {
                     recorder.pauseRecording();
-                    server.getPlayerList().broadcastMessage(render(SReplayMod.getFormats().autoPaused, name), ChatType.CHAT, NIL);
+                    server.getPlayerList().broadcastSystemMessage(render(SReplayMod.getFormats().autoPaused, name), true);
                 }
                 if (!trackedPlayers.isEmpty() && recorder.isRecordingPaused()) {
                     recorder.resumeRecording();
-                    server.getPlayerList().broadcastMessage(render(SReplayMod.getFormats().autoResumed, name), ChatType.CHAT, NIL);
+                    server.getPlayerList().broadcastSystemMessage(render(SReplayMod.getFormats().autoResumed, name), true);
                 }
             } else {
                 recorder.resumeRecording();
@@ -299,23 +302,22 @@ public class Photographer extends ServerPlayer implements ISizeLimitExceededList
         if (rparam.sizeLimit != -1) {
             size += "/" + rparam.sizeLimit + "M";
         }
-        MutableComponent ret = new TextComponent(getGameProfile().getName())
+        MutableComponent ret = Component.literal(getGameProfile().getName())
                 .setStyle(Style.EMPTY.withItalic(true).withColor(ChatFormatting.AQUA));
 
-        ret.append(new TextComponent(" " + time).setStyle(Style.EMPTY.withItalic(false).withColor(ChatFormatting.GREEN)))
-                .append(new TextComponent(" " + size).setStyle(Style.EMPTY.withItalic(false).withColor(ChatFormatting.GREEN)));
+        ret.append(Component.literal(" " + time).setStyle(Style.EMPTY.withItalic(false).withColor(ChatFormatting.GREEN)))
+                .append(Component.literal(" " + size).setStyle(Style.EMPTY.withItalic(false).withColor(ChatFormatting.GREEN)));
         return ret;
     }
 
     public void tp(ResourceKey<Level> dim, double x, double y, double z) {
         if (!this.getLevel().dimension().equals(dim)) {
             ServerLevel oldMonde = server.getLevel(this.getLevel().dimension()), nouveau = server.getLevel(dim);
-            oldMonde.removePlayerImmediately(this);
-            removed = false;
+            oldMonde.removePlayerImmediately(this, RemovalReason.DISCARDED);
             setLevel(nouveau);
             server.getPlayerList().sendLevelInfo(this, nouveau);
             gameMode.setLevel(nouveau);
-            connection.send(new ClientboundRespawnPacket(nouveau.dimensionType(), dim, BiomeManager.obfuscateSeed(nouveau.getSeed()), this.gameMode.getGameModeForPlayer(), this.gameMode.getPreviousGameModeForPlayer(), nouveau.isDebug(), nouveau.isFlat(), true));
+            connection.send(new ClientboundRespawnPacket(nouveau.dimensionTypeId(), dim, BiomeManager.obfuscateSeed(nouveau.getSeed()), this.gameMode.getGameModeForPlayer(), this.gameMode.getPreviousGameModeForPlayer(), nouveau.isDebug(), nouveau.isFlat(), true, this.getLastDeathLocation()));
             nouveau.addDuringPortalTeleport(this);
         }
         teleportTo(x, y, z);
@@ -332,7 +334,7 @@ public class Photographer extends ServerPlayer implements ISizeLimitExceededList
 
     private void postKill() {
         if (connection != null) {
-            connection.onDisconnect(new TextComponent("Killed"));
+            connection.onDisconnect(Component.literal("Killed"));
         }
     }
 
@@ -343,14 +345,14 @@ public class Photographer extends ServerPlayer implements ISizeLimitExceededList
             CompletableFuture<Void> f = recorder
                     .saveRecording(saveFile, new RecordingSaveProgressBar(server, saveFile.getName())).thenRun(() -> {
                         server.getPlayerList()
-                                .broadcastMessage(TextRenderer.render(SReplayMod.getFormats().savedRecordingFile,
-                                        getGameProfile().getName(), saveFile.getName()), ChatType.CHAT, NIL);
+                                .broadcastSystemMessage(TextRenderer.render(SReplayMod.getFormats().savedRecordingFile,
+                                        getGameProfile().getName(), saveFile.getName()), true);
                     }).exceptionally(exception -> {
                         exception.printStackTrace();
-                        server.getPlayerList().broadcastMessage(
+                        server.getPlayerList().broadcastSystemMessage(
                                 TextRenderer.render(SReplayMod.getFormats().failedToSaveRecordingFile,
                                         getGameProfile().getName(), exception.toString()),
-                                ChatType.CHAT, NIL);
+                                true);
                         return null;
                     });
             if (!async) {
@@ -377,9 +379,9 @@ public class Photographer extends ServerPlayer implements ISizeLimitExceededList
             try {
                 connect();
             } catch (IOException e) {
-                server.getPlayerList().broadcastMessage(
+                server.getPlayerList().broadcastSystemMessage(
                         TextRenderer.render(SReplayMod.getFormats().failedToStartRecording, getGameProfile().getName()),
-                        ChatType.CHAT, NIL);
+                        true);
                 e.printStackTrace();
             }
         });

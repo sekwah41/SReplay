@@ -4,18 +4,20 @@
   "package": "com.hadroncfy.sreplay.mixin",
   "compatibilityLevel": "JAVA_16",
   "mixins": [
+    "EntityRemovedAccessor",
+    "GameStateChangeS2CPacketAccessor",
+    "ServerEntityMixin",
     "MixinCommandManager",
-    "MixinMinecraftServer",
-    "PlayerSpawnS2CPacketAccessor",
-    "PlayerManagerAccessor",
-    "MixinThreadedAnvilChunkStorage",
-    "ThreadedAnvilChunkStorageAccessor",
     "MixinEntityTracker",
-    "WorldTimeUpdateS2CPacketAccessor",
-    "GameStateChangeS2CPacketAccessor"
+    "MixinIntegratedServer",
+    "MixinMinecraftServer",
+    "MixinThreadedAnvilChunkStorage",
+    "PlayerManagerAccessor",
+    "PlayerSpawnS2CPacketAccessor",
+    "ThreadedAnvilChunkStorageAccessor",
+    "WorldTimeUpdateS2CPacketAccessor"
   ],
   "client": [
-    "MixinIntegratedServer"
   ],
   "server": [
   ],

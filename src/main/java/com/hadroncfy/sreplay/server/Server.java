@@ -53,6 +53,7 @@ public class Server {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ch.pipeline()
+                        // TODO check if extra lib is needed
                 .addLast(new HttpRequestDecoder())
                 .addLast(new HttpResponseEncoder())
                 .addLast(new HttpObjectAggregator(1048576))

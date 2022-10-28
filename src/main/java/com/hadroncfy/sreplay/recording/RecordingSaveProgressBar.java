@@ -18,7 +18,7 @@ public class RecordingSaveProgressBar extends ServerBossEvent implements Progres
             BossEvent.BossBarColor.GREEN, 
             BossEvent.BossBarOverlay.PROGRESS
         );
-        setPercent(0);
+        setProgress(0);
         for (ServerPlayer player: server.getPlayerList().getPlayers()){
             addPlayer(player);
         }
@@ -27,12 +27,12 @@ public class RecordingSaveProgressBar extends ServerBossEvent implements Progres
 
     @Override
     public void onStart() {
-        setPercent(0);
+        setProgress(0);
     }
 
     @Override
     public void onProgress(float percentage) {
-        setPercent(percentage);
+        setProgress(percentage);
     }
 
     @Override

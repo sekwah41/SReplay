@@ -166,7 +166,7 @@ public class SReplayCommand {
                 return 1;
             }
             p.getRecorder().removeMarker(id);
-            src.getServer().getPlayerList().broadcastMessage(render(SReplayMod.getFormats().markerRemoved, ctx.getSource().getTextName(), name, Integer.toString(id + 1)), ChatType.CHAT, getSenderUUID(ctx));
+            src.getServer().getPlayerList().broadcastSystemMessage(render(SReplayMod.getFormats().markerRemoved, ctx.getSource().getTextName(), name, Integer.toString(id + 1)), true);
         }
         return 0;
     }
@@ -198,7 +198,7 @@ public class SReplayCommand {
             final ChannelFuture ch = SReplayMod.getServer().bind(SReplayMod.getConfig().serverListenAddress, SReplayMod.getConfig().serverPort);
             ch.addListener(future -> {
                 if (future.isSuccess()){
-                    server.getPlayerList().broadcastMessage(SReplayMod.getFormats().serverStarted, ChatType.CHAT, getSenderUUID(ctx));
+                    server.getPlayerList().broadcastSystemMessage(SReplayMod.getFormats().serverStarted, true);
                 }
                 else {
                     src.sendFailure(render(SReplayMod.getFormats().serverStartFailed, future.cause().getMessage()));
@@ -217,7 +217,7 @@ public class SReplayCommand {
         final ChannelFuture ch = SReplayMod.getServer().stop();
         ch.addListener(future -> {
             if (future.isSuccess()){
-                server.getPlayerList().broadcastMessage(SReplayMod.getFormats().serverStopped, ChatType.CHAT, getSenderUUID(ctx));
+                server.getPlayerList().broadcastSystemMessage(SReplayMod.getFormats().serverStopped, true);
             }
             else {
                 src.sendFailure(render(SReplayMod.getFormats().serverStopFailed, future.cause().getMessage()));
@@ -275,7 +275,7 @@ public class SReplayCommand {
         if (p != null){
             String name = StringArgumentType.getString(ctx, "marker");
             p.getRecorder().addMarker(name);
-            ctx.getSource().getServer().getPlayerList().broadcastMessage(render(SReplayMod.getFormats().markerAdded, ctx.getSource().getTextName(), p.getGameProfile().getName(), name), ChatType.CHAT, getSenderUUID(ctx));
+            ctx.getSource().getServer().getPlayerList().broadcastSystemMessage(render(SReplayMod.getFormats().markerAdded, ctx.getSource().getTextName(), p.getGameProfile().getName(), name), true);
             return 1;
         }
         else {
@@ -287,7 +287,7 @@ public class SReplayCommand {
         Photographer p = requirePlayer(ctx);
         if (p != null){
             p.setPaused(true);
-            ctx.getSource().getServer().getPlayerList().broadcastMessage(render(SReplayMod.getFormats().recordingPaused, ctx.getSource().getTextName(), p.getGameProfile().getName()), ChatType.CHAT, getSenderUUID(ctx));
+            ctx.getSource().getServer().getPlayerList().broadcastSystemMessage(render(SReplayMod.getFormats().recordingPaused, ctx.getSource().getTextName(), p.getGameProfile().getName()), true);
             return 1;
         }
         else {
@@ -299,7 +299,7 @@ public class SReplayCommand {
         Photographer p = requirePlayer(ctx);
         if (p != null){
             p.setPaused(false);
-            ctx.getSource().getServer().getPlayerList().broadcastMessage(render(SReplayMod.getFormats().recordingResumed, ctx.getSource().getTextName(), p.getGameProfile().getName()), ChatType.CHAT, getSenderUUID(ctx));
+            ctx.getSource().getServer().getPlayerList().broadcastSystemMessage(render(SReplayMod.getFormats().recordingResumed, ctx.getSource().getTextName(), p.getGameProfile().getName()), true);
             return 1;
         }
         else {
@@ -357,15 +357,15 @@ public class SReplayCommand {
                 try {
                     Files.delete(rec.toPath());
                     server.getPlayerList()
-                        .broadcastMessage(render(SReplayMod.getFormats().deletedRecordingFile, src.getTextName(), rec.getName()), ChatType.CHAT, getSenderUUID(ctx));
+                        .broadcastSystemMessage(render(SReplayMod.getFormats().deletedRecordingFile, src.getTextName(), rec.getName()), true);
                 } catch (IOException e) {
                     e.printStackTrace();
-                    server.getPlayerList().broadcastMessage(render(
+                    server.getPlayerList().broadcastSystemMessage(render(
                         SReplayMod.getFormats().failedToDeleteRecordingFile,
                         src.getTextName(),
                         rec.getName(),
                         e
-                    ), ChatType.CHAT, getSenderUUID(ctx));
+                    ), true);
                 }
             });
         } else {
@@ -388,7 +388,7 @@ public class SReplayCommand {
         if (p != null){
             Vec3 pos = ctx.getSource().getPosition();
             p.tp(ctx.getSource().getLevel().dimension(), pos.x, pos.y, pos.z);
-            ctx.getSource().getServer().getPlayerList().broadcastMessage(render(SReplayMod.getFormats().teleportedBotToYou, p.getGameProfile().getName(), ctx.getSource().getTextName()), ChatType.CHAT, getSenderUUID(ctx));
+            ctx.getSource().getServer().getPlayerList().broadcastSystemMessage(render(SReplayMod.getFormats().teleportedBotToYou, p.getGameProfile().getName(), ctx.getSource().getTextName()), true);
             LOGGER.info("Teleported {} to {}", p.getGameProfile().getName(), ctx.getSource().getTextName());
             return 1;
         }

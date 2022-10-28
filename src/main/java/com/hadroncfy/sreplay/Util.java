@@ -9,7 +9,6 @@ import com.hadroncfy.sreplay.recording.Photographer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -35,7 +34,7 @@ public class Util {
     }
 
     public static Component makeBroadcastMsg(String player, String msg){
-        return new TextComponent("[" + player + ": " + msg + "]").setStyle(Style.EMPTY.withItalic(true).withColor(ChatFormatting.DARK_GRAY));
+        return Component.literal("[" + player + ": " + msg + "]").setStyle(Style.EMPTY.withItalic(true).withColor(ChatFormatting.DARK_GRAY));
     }
 
     public static Collection<Photographer> getFakes(MinecraftServer server){

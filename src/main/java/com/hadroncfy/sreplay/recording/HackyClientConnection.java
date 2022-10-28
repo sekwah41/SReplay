@@ -3,8 +3,10 @@ package com.hadroncfy.sreplay.recording;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import net.minecraft.network.Connection;
+import net.minecraft.network.PacketSendListener;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
+import org.jetbrains.annotations.Nullable;
 
 public class HackyClientConnection extends Connection {
     private IPacketListener p;
@@ -24,11 +26,13 @@ public class HackyClientConnection extends Connection {
     }
 
     @Override
-    public void send(Packet<?> packet, GenericFutureListener<? extends Future<? super Void>> callback) {
+    public void send(Packet<?> packet, @Nullable PacketSendListener listener) {
         p.onPacket(packet);
-        if (callback != null) {
+        if (listener != null) {
             try {
-                notifyListener(new SimpleCompletedFuture(), callback);
+                listener.onSuccess();
+                // TODO find out how this relates to the callbacks
+                //notifyListener(new SimpleCompletedFuture(), callback);
             } catch (Exception e) {
                 e.printStackTrace();
             }

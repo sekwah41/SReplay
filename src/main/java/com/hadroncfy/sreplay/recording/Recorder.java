@@ -27,11 +27,7 @@ import net.minecraft.SharedConstants;
 import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientboundAddPlayerPacket;
-import net.minecraft.network.protocol.game.ClientboundChatPacket;
-import net.minecraft.network.protocol.game.ClientboundDisconnectPacket;
-import net.minecraft.network.protocol.game.ClientboundGameEventPacket;
-import net.minecraft.network.protocol.game.ClientboundSetTimePacket;
+import net.minecraft.network.protocol.game.*;
 import net.minecraft.network.protocol.login.ClientboundGameProfilePacket;
 import net.minecraft.server.MinecraftServer;
 
@@ -95,7 +91,7 @@ public class Recorder implements IPacketListener {
         metaData.date = startTime;
         metaData.mcversion = SharedConstants.getCurrentVersion().getName();
         server.getPlayerList()
-            .broadcastMessage(TextRenderer.render(SReplayMod.getFormats().startedRecording, profile.getName()), ChatType.CHAT, new UUID(0, 0));
+            .broadcastSystemMessage(TextRenderer.render(SReplayMod.getFormats().startedRecording, profile.getName()), true);
 
         // Must contain this packet, otherwise ReplayMod would complain
         savePacket(new ClientboundGameProfilePacket(profile));
@@ -247,7 +243,7 @@ public class Recorder implements IPacketListener {
         if (!isSaving){
             isSaving = true;
             metaData.duration = (int) lastPacket;
-            server.getPlayerList().broadcastMessage(TextRenderer.render(SReplayMod.getFormats().savingRecordingFile, profile.getName()), ChatType.CHAT, new UUID(0, 0));
+            server.getPlayerList().broadcastSystemMessage(TextRenderer.render(SReplayMod.getFormats().savingRecordingFile, profile.getName()), true);
             return CompletableFuture.runAsync(() -> {
                 saveMetadata();
                 saveMarkers();
@@ -342,7 +338,7 @@ public class Recorder implements IPacketListener {
                     || r == ClientboundGameEventPacket.RAIN_LEVEL_CHANGE
                 ) return;
             }
-            if (param.ignoreChat && p instanceof ClientboundChatPacket){
+            if (param.ignoreChat && p instanceof ClientboundPlayerChatPacket){
                 return;
             }
             savePacket(p);

@@ -110,12 +110,12 @@ public class OptionManager {
                     try {
                         if(entry.set(context, player.getRecordingParam())) {
                             player.syncParams();
-                            server.getPlayerList().broadcastMessage(render(getFormats().setParam,
+                            server.getPlayerList().broadcastSystemMessage(render(getFormats().setParam,
                                 src.getTextName(),
                                 player.getGameProfile().getName(),
                                 entry.name,
                                 entry.field.get(player.getRecordingParam()).toString()
-                            ), ChatType.CHAT, SReplayCommand.getSenderUUID(context));
+                            ), true);
                         }
                     }
                     catch(InvalidEnumException e){
